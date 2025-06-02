@@ -1,0 +1,218 @@
+---
+# TODO: configure ufw
+
+- name: create service configuration directories
+  ansible.builtin.file:
+    path: "/home/{{ podman_identity_podman_rootless_user }}/{{ item }}"
+    state: directory
+    owner: "{{ podman_identity_podman_rootless_user }}"
+    group: "{{ podman_identity_podman_rootless_user }}"
+    mode: "0755"
+  become: true
+  with_items:
+    - keycloak
+    - ldap
+    - postgres
+
+- name: download keycloak providers
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/home/{{ podman_identity_podman_rootless_user }}/keycloak/{{ item.url | basename }}"
+    checksum: "sha256:{{ item.sha256 }}"
+  with_items: "{{ podman_identity_keycloak_providers }}"
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+  notify: restart keycloak
+
+- name: install systemd units for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_identity_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_identity_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - ldap.container
+    - keycloak.container
+    - postgres.container
+  notify:
+    - "restart {{ item | split('.') | first }}"
+  become: true
+
+- name: install network quadlets for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_identity_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_identity_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - frontend.network
+    - ldap.network
+    - keycloak.network
+  become: true
+
+- name: verify quadlets are correctly defined
+  ansible.builtin.command: /usr/libexec/podman/quadlet -dryrun -user
+  register: podman_identity_quadlet_result
+  ignore_errors: true
+  changed_when: false
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+
+- name: assert that the quadlet verification succeeded
+  ansible.builtin.assert:
+    that:
+      - podman_identity_quadlet_result.rc == 0
+    fail_msg: "'/usr/libexec/podman/quadlet -dryrun -user' failed! Output withheld to prevent leaking secrets."
+
+- name: start postgres and keycloak
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+  with_items:
+    - postgres
+    - keycloak
+
+- name: set up nginx
+  ansible.builtin.import_role:
+    name: podman_nginx
+  vars:
+    podman_nginx_podman_rootless_user: "{{ podman_identity_podman_rootless_user }}"
+    podman_nginx_primary_hostname: "{{ podman_identity_keycloak_hostname }}"
+    podman_nginx_frontend_network: frontend
+
+- name: start ldap
+  ansible.builtin.systemd_service:
+    name: ldap
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+
+- name: create nginx configuration file
+  ansible.builtin.template:
+    src: nginx.conf
+    dest: "/home/{{ podman_identity_podman_rootless_user }}/nginx/nginx.conf"
+    owner: "{{ podman_identity_podman_rootless_user }}"
+    group: "{{ podman_identity_podman_rootless_user }}"
+    mode: "0644"
+  become: true
+  notify: restart nginx
+
+- name: wait 30 seconds for ldap server to start
+  ansible.builtin.pause:
+    seconds: 30
+
+- name: create ldap suffix
+  containers.podman.podman_container_exec:
+    name: ldap
+    argv:
+      - dsconf
+      - -v
+      - localhost
+      - backend
+      - create
+      - --suffix
+      - "{{ podman_identity_ldap_database_suffix_dn }}"
+      - --be-name
+      - "{{ podman_identity_ldap_database_backend_name }}"
+      - --create-suffix
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+  register: podman_identity_create_suffix
+  ignore_errors: true
+  changed_when: false
+  tags:
+    - ldap
+
+- name: create suffix result (only when changed)
+  debug:
+    msg: "Suffix was created"
+  when: not podman_identity_create_suffix.failed
+  changed_when: not podman_identity_create_suffix.failed
+
+- name: ldap organisational units
+  community.general.ldap_entry:
+    dn: "ou={{ item }},{{ podman_identity_ldap_database_suffix_dn }}"
+    objectClass:
+      - top
+      - organizationalUnit
+    server_uri: ldaps://{{ inventory_hostname }}/
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ podman_identity_ldap_directory_manager_password }}"
+  delegate_to: localhost
+  with_items:
+    - Administrators
+    - People
+    - Groups
+  environment:
+    - LDAPTLS_REQCERT: "{% if podman_identity_certbot_testing %}never{% else %}always{% endif %}"
+  tags: ldap
+
+- name: enable memberOf plugin
+  containers.podman.podman_container_exec:
+    name: ldap
+    argv:
+      - dsconf
+      - -v
+      - localhost
+      - -D "cn=Directory Manager"
+      - plugin
+      - memberof
+      - enable
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+  tags:
+    - ldap
+
+- name: disable anonymous bind
+  containers.podman.podman_container_exec:
+    name: ldap
+    argv:
+      - dsconf
+      - -v
+      - localhost
+      - -D "cn=Directory Manager"
+      - config
+      - replace
+      - nsslapd-allow-anonymous-access=off
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+  tags:
+    - ldap
+
+- name: ldap read-only administrator
+  community.general.ldap_entry:
+    dn: "uid=admin,ou=Administrators,{{ podman_identity_ldap_database_suffix_dn }}"
+    objectClass:
+      - top
+      - person
+      - organizationalPerson
+      - inetOrgPerson
+    attributes:
+      cn: admin
+      sn: admin
+      userPassword: "{{ podman_identity_ldap_administrator_password }}"
+    server_uri: ldaps://{{ inventory_hostname }}/
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ podman_identity_ldap_directory_manager_password }}"
+  delegate_to: localhost
+  environment:
+    - LDAPTLS_REQCERT: "{% if podman_identity_certbot_testing %}never{% else %}always{% endif %}"
+  tags: ldap
+
+- name: ldap access control information
+  community.general.ldap_attrs:
+    dn: "{{ podman_identity_ldap_database_suffix_dn }}"
+    attributes:
+      aci: '(target="ldap:///{{ podman_identity_ldap_database_suffix_dn }}")(targetattr="*") (version 3.0; acl "readonly"; allow (search,read,compare) userdn="ldap:///uid=admin,ou=Administrators,{{ podman_identity_ldap_database_suffix_dn }}";)'
+    server_uri: ldaps://{{ inventory_hostname }}/
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ podman_identity_ldap_directory_manager_password }}"
+  delegate_to: localhost
+  environment:
+    - LDAPTLS_REQCERT: "{% if podman_identity_certbot_testing %}never{% else %}always{% endif %}"
+  tags: ldap

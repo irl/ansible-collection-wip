@@ -1,0 +1,88 @@
+---
+- name: setup alternate SSH port
+  lineinfile:
+    dest: "/etc/ssh/sshd_config"
+    regexp: "^Port"
+    line: "Port 2222"
+  notify: restart sshd
+  become: true
+
+- name: create service configuration directories
+  ansible.builtin.file:
+    path: "/home/{{ podman_forgejo_podman_rootless_user }}/{{ item }}"
+    state: directory
+    owner: "{{ podman_forgejo_podman_rootless_user }}"
+    group: "{{ podman_forgejo_podman_rootless_user }}"
+    mode: "0755"
+  become: true
+  with_items:
+    - mysql
+    - forgejo
+
+- name: install podman quadlet for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_forgejo_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_forgejo_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - forgejo.container
+    - mariadb.container
+  notify:
+    - "restart {{ item | split('.') | first }}"
+  become: true
+
+- name: install network quadlets for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_forgejo_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_forgejo_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - frontend.network
+    - forgejo.network
+  become: true
+
+- name: verify quadlets are correctly defined
+  ansible.builtin.command: /usr/libexec/podman/quadlet -dryrun -user
+  register: podman_forgejo_quadlet_result
+  ignore_errors: true
+  changed_when: false
+  become: true
+  become_user: "{{ podman_forgejo_podman_rootless_user }}"
+
+- name: assert that the quadlet verification succeeded
+  ansible.builtin.assert:
+    that:
+      - podman_forgejo_quadlet_result.rc == 0
+    fail_msg: "'/usr/libexec/podman/quadlet -dryrun -user' failed! Output withheld to prevent leaking secrets."
+
+- name: start forgejo and mariadb
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ podman_forgejo_podman_rootless_user }}"
+  with_items:
+    - forgejo
+    - mariadb
+
+- name: set up nginx
+  ansible.builtin.include_role:
+    name: podman_nginx
+  vars:
+    podman_nginx_frontend_network: frontend
+    podman_nginx_podman_rootless_user: "{{ podman_forgejo_podman_rootless_user }}"
+    podman_nginx_primary_hostname: "{{ podman_forgejo_web_hostname }}"
+
+- name: create nginx configuration file
+  ansible.builtin.template:
+    src: nginx.conf
+    dest: "/home/{{ podman_forgejo_podman_rootless_user }}/nginx/nginx.conf"
+    owner: "{{ podman_forgejo_podman_rootless_user }}"
+    group: "{{ podman_forgejo_podman_rootless_user }}"
+    mode: "0644"
+  become: true
+  notify: restart nginx

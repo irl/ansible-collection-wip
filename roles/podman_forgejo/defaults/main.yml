@@ -1,0 +1,7 @@
+---
+podman_forgejo_mariadb_database: forgejo
+# podman_forgejo_mariadb_password:
+# podman_forgejo_mariadb_root_password:
+podman_forgejo_mariadb_user: forgejo
+podman_forgejo_podman_rootless_user: forge
+podman_forgejo_web_hostname: "{{ inventory_hostname }}"

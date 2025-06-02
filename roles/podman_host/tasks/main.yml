@@ -1,0 +1,69 @@
+---
+- name: set unprivileged port minimum
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "{{ podman_host_minimum_unpriv_port }}"
+    sysctl_set: true
+    sysctl_file: /etc/sysctl.d/zzz-podman-unpriv-port.conf
+    reload: true
+  become: true
+
+- name: create users for rootless podman
+  ansible.builtin.user:
+    name: "{{ item }}"
+  become: true
+  with_items: "{{ podman_host_rootless_users }}"
+
+- name: set XDG_RUNTIME_DIR in .profile for rootless users
+  ansible.builtin.lineinfile:
+    path: "/home/{{ item }}/.bashrc"
+    line: "export XDG_RUNTIME_DIR=/run/user/$(id -u)"
+    create: false
+  become: true
+  become_user: "{{ item }}"
+  with_items: "{{ podman_host_rootless_users }}"
+
+- name: enable linger for rootless users
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/loginctl
+      - enable-linger
+      - "{{ item }}"
+    creates: "/var/lib/systemd/linger/{{ item }}"
+  become: true
+  with_items: "{{ podman_host_rootless_users }}"
+
+- name: create /etc/subuid and /etc/subgid
+  ansible.builtin.template:
+    dest: "/etc/{{ item }}"
+    src: subXid.j2
+  with_items:
+    - subuid
+    - subgid
+  become: true
+
+- name: install podman
+  ansible.builtin.apt:
+    pkg: podman
+    state: latest
+  become: true
+
+- name: create quadlets directory
+  ansible.builtin.file:
+    path: "/home/{{ item }}/.config/containers/systemd"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: "0700"
+  with_items: "{{ podman_host_rootless_users }}"
+  become: true
+
+- name: enable podman auto update timer for rootless users
+  ansible.builtin.systemd_service:
+    name: podman-auto-update.timer
+    scope: user
+    state: started
+    enabled: true
+  become: true
+  become_user: "{{ item }}"
+  with_items: "{{ podman_host_rootless_users }}"

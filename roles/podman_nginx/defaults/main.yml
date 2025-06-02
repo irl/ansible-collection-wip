@@ -1,0 +1,6 @@
+---
+podman_nginx_additional_hostnames: []
+podman_nginx_certbot_testing: false
+# podman_nginx_frontend_network:
+podman_nginx_podman_rootless_user: nginx
+# podman_nginx_primary_hostname:

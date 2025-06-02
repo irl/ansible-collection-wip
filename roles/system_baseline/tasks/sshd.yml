@@ -1,0 +1,24 @@
+---
+- name: sshd PermitRootLogin=no
+  lineinfile:
+    dest: "/etc/ssh/sshd_config"
+    regexp: "^#?\\w*PermitRootLogin"
+    line: "PermitRootLogin no"
+    state: present
+  become: true
+  notify: "reload sshd"
+
+- name: sshd PasswordAuthentication=no
+  lineinfile:
+    dest: "/etc/ssh/sshd_config"
+    regexp: "^#?\\w*PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    state: present
+  become: true
+  notify: "reload sshd"
+
+- name: retrieve ssh host key
+  fetch:
+    src: "/etc/ssh/ssh_host_ed25519_key.pub"
+    dest: "files/ssh_host_keys/{{ inventory_hostname }}_ed25519.pub"
+    flat: yes

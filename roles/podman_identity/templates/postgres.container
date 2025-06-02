@@ -1,0 +1,15 @@
+[Container]
+AutoUpdate=registry
+ContainerName=postgres
+Environment=\
+  POSTGRES_DB={{ podman_identity_postgres_keycloak_database }} \
+  POSTGRES_PASSWORD={{ podman_identity_postgres_keycloak_password }} \
+  POSTGRES_USER={{ podman_identity_postgres_keycloak_username }} \
+  POSTGRES_HOST_AUTH_METHOD=scram-sha-256 \
+  POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+Image=docker.io/postgres:17.3
+Network=keycloak.network
+Volume=/home/{{ podman_identity_podman_rootless_user }}/postgres:/var/lib/postgresql/data:rw
+
+[Install]
+WantedBy=default.target

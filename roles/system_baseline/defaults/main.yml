@@ -1,0 +1,12 @@
+---
+system_baseline_admin_users:
+  - user: irl
+    comment: irl
+    ssh_public_key: "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIJpoCJEax0XTNK6qfYfZV60euSwoc0RQ0bwFDQGMWYQnAAAABHNzaDo="
+system_baseline_admin_user_groups_debian:
+  - adm
+  - staff
+  - sudo
+  - systemd-journal
+system_baseline_retired_admin_users: []
+system_baseline_service_users: []

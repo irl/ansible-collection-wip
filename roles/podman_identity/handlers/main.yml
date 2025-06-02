@@ -1,0 +1,27 @@
+---
+- name: restart ldap
+  ansible.builtin.systemd_service:
+    name: ldap
+    state: restarted
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+
+- name: restart postgres
+  ansible.builtin.systemd_service:
+    name: postgres
+    state: restarted
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"
+
+- name: restart keycloak
+  ansible.builtin.systemd_service:
+    name: keycloak
+    state: restarted
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: "{{ podman_identity_podman_rootless_user }}"

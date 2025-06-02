@@ -1,0 +1,33 @@
+[Unit]
+Requires=postgres.service
+After=postgres.service
+
+[Container]
+AutoUpdate=registry
+ContainerName=keycloak
+Environment=\
+    KC_DB=postgres \
+    KC_DB_PASSWORD={{ podman_identity_postgres_keycloak_password }} \
+    KC_DB_URL=jdbc:postgresql://postgres/{{ podman_identity_postgres_keycloak_database }} \
+    KC_DB_USERNAME={{ podman_identity_postgres_keycloak_username }} \
+    KC_HOSTNAME={{ podman_identity_keycloak_hostname }} \
+    KC_HTTP_ENABLED=true \
+    KC_HTTP_PORT=8080 \
+    KC_PROXY_HEADERS=xforwarded \
+    KC_BOOTSTRAP_ADMIN_USERNAME={{ podman_identity_keycloak_admin_username }} \
+    KC_BOOTSTRAP_ADMIN_PASSWORD={{ podman_identity_keycloak_admin_password }} \
+    PROXY_ADDRESS_FORWARDING=true
+Exec=start
+Image=quay.io/keycloak/keycloak:26.1
+Network=keycloak.network
+Network=ldap.network
+Network=frontend.network
+{% for provider in podman_identity_keycloak_providers %}
+Volume=/home/{{ podman_identity_podman_rootless_user }}/keycloak/{{ provider.url | basename }}:/opt/keycloak/providers/{{ provider.url | basename }}:ro
+{% endfor %}
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

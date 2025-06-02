@@ -1,0 +1,13 @@
+[Unit]
+Description=Run certbot renew
+
+[Container]
+AutoUpdate=registry
+ContainerName=certbot-renew
+Exec=renew
+Image=docker.io/certbot/certbot:latest
+Volume=/home/{{ podman_nginx_podman_rootless_user }}/certbot/www:/var/www/certbot
+Volume=/home/{{ podman_nginx_podman_rootless_user }}/certbot/conf:/etc/letsencrypt
+
+[Service]
+Restart=no

@@ -1,0 +1,29 @@
+---
+- name: upgrade debian packages (apt)
+  ansible.builtin.apt:
+    upgrade: safe
+    cache_valid_time: 3600
+  become: true
+  when: ansible_distribution == 'Debian'
+
+- name: install system packages (dnf)
+  dnf:
+    name: "*"
+    state: latest
+    update_cache: true
+  become: true
+  when: ansible_distribution == 'AlmaLinux'
+
+- name: setup users
+  ansible.builtin.include_tasks:
+    file: users.yml
+
+- name: setup OpenSSH server
+  ansible.builtin.include_tasks:
+    file: sshd.yml
+
+- name: remove root authorised keys
+  ansible.builtin.file:
+    path: /root/.ssh/authorized_keys
+    state: absent
+  become: true

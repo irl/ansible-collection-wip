@@ -1,0 +1,3 @@
+---
+podman_host_minimum_unpriv_port: "22"
+podman_host_rootless_users: ["podman"]

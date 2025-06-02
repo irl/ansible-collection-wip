@@ -1,0 +1,15 @@
+[Container]
+ContainerName=mariadb
+Environment=MARIADB_ROOT_PASSWORD={{ podman_forgejo_mariadb_root_password }}
+Environment=MARIADB_USER={{ podman_forgejo_mariadb_user }}
+Environment=MARIADB_PASSWORD={{ podman_forgejo_mariadb_password }}
+Environment=MARIADB_DATABASE={{ podman_forgejo_mariadb_database }}
+Image=docker.io/mariadb:11
+Network=forgejo
+Volume=/home/{{ podman_forgejo_podman_rootless_user }}/mysql:/var/lib/mysql
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

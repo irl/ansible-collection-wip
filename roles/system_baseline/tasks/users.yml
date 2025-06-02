@@ -1,0 +1,74 @@
+---
+- name: create a group for admin users
+  ansible.builtin.group:
+    name: ops
+    state: present
+  become: true
+
+- name: create admin users
+  ansible.builtin.user:
+    name: "{{ item.user }}"
+    comment: "{{ item.comment | default(item.user) }}"
+    group: ops
+  with_items: "{{ system_baseline_admin_users }}"
+  become: true
+
+- name: remove retired admin users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ system_baseline_retired_admin_users }}"
+  become: true
+
+- name: additional groups for admin users (Debian only)
+  ansible.builtin.user:
+    name: "{{ item.user }}"
+    groups: "{{ system_baseline_admin_user_groups_debian }}"
+    append: true
+  with_items: "{{ system_baseline_admin_users }}"
+  become: true
+  when: ansible_distribution == 'Debian'
+
+- name: install SSH keys for admin users
+  ansible.posix.authorized_key:
+    user: "{{ item.user }}"
+    state: present
+    key: "{{ item.ssh_public_key }}"
+    exclusive: true
+  with_items: "{{ system_baseline_admin_users }}"
+  become: true
+
+- name: allow passwordless sudo for sudo group (Debian only)
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: "^#?\\w*%sudo "
+    line: "%sudo ALL=(ALL) NOPASSWD: ALL"
+    validate: "/usr/sbin/visudo -cf %s"
+  become: true
+  when: ansible_distribution == 'Debian'
+
+- name: create a group for service users
+  ansible.builtin.group:
+    name: services
+    state: present
+  become: true
+
+- name: create service users
+  ansible.builtin.user:
+    name: "{{ item.user }}"
+    comment: "{{ item.comment | default(item.user) }}"
+    group: services
+  with_items: "{{ system_baseline_service_users }}"
+  become: true
+
+- name: enable linger for service users
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/loginctl
+      - enable-linger
+      - "{{ item.user }}"
+    creates: "/var/lib/systemd/linger/{{ item.user }}"
+  when: "ansible_distribution == 'Debian' and (item.linger is not defined or item.linger)"
+  become: true
+  with_items: "{{ system_baseline_service_users }}"

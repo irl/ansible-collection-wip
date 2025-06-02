@@ -1,0 +1,17 @@
+---
+podman_identity_certbot_testing: false
+# podman_identity_keycloak_admin_password:
+podman_identity_keycloak_admin_username: admin
+podman_identity_keycloak_hostname: "{{ inventory_hostname }}"
+podman_identity_keycloak_providers:
+  - url: https://github.com/jacekkow/keycloak-protocol-cas/releases/download/26.1.2/keycloak-protocol-cas-26.1.2.jar
+    sha256: de106e8b6b0018a5f121dfa04a14859743e35c5c7ef0abdb01e4a6018d1e2d84
+  - url: https://github.com/sventorben/keycloak-restrict-client-auth/releases/download/v26.0.0/keycloak-restrict-client-auth.jar
+    sha256: 69274e7864f1356f6e14c668787be0c4b8f4d1f4ed28b4e5fa540fa71c8df472
+# podman_identity_ldap_administrator_password:
+# podman_identity_ldap_directory_manager_password:
+# podman_identity_ldap_database_suffix_dn:
+podman_identity_podman_rootless_user: identity
+podman_identity_postgres_keycloak_database: keycloak
+# podman_identity_postgres_keycloak_password:
+podman_identity_postgres_keycloak_username: keycloak

@@ -1,0 +1,17 @@
+[Container]
+ContainerName=ldap
+Environment=DS_DM_PASSWORD={{ podman_identity_ldap_directory_manager_password }}
+Image=quay.io/389ds/dirsrv:latest
+Network=ldap.network
+PublishPort=636:3636/tcp
+Volume=/home/{{ podman_identity_podman_rootless_user }}/ldap:/data:rw
+Volume=/home/{{ podman_identity_podman_rootless_user }}/certbot/conf/live/{{ podman_identity_keycloak_hostname }}/privkey.pem:/data/tls/server.key:ro
+Volume=/home/{{ podman_identity_podman_rootless_user }}/certbot/conf/live/{{ podman_identity_keycloak_hostname }}/cert.pem:/data/tls/server.crt:ro
+Volume=/home/{{ podman_identity_podman_rootless_user }}/certbot/conf/live/{{ podman_identity_keycloak_hostname }}/chain.pem:/data/tls/ca/chain.crt:ro
+
+[Service]
+RuntimeMaxSec=604800
+Restart=always
+
+[Install]
+WantedBy=default.target

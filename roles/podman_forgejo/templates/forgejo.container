@@ -1,0 +1,28 @@
+[Unit]
+Requires=mariadb.service
+After=mariadb.service
+
+[Container]
+ContainerName=forgejo
+Environment=USER_UID=1000
+Environment=USER_GID=1000
+Environment=FORGEJO__database__DB_TYPE=mysql
+Environment=FORGEJO__database__HOST=mariadb:3306
+Environment=FORGEJO__database__NAME={{ podman_forgejo_mariadb_database }}
+Environment=FORGEJO__database__USER={{ podman_forgejo_mariadb_user }}
+Environment=FORGEJO__database__PASSWD={{ podman_forgejo_mariadb_password }}
+Environment=FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION=true
+Environment=FORGEJO__server__LANDING_PAGE=/explore/repos
+Image=codeberg.org/forgejo/forgejo:11
+Network=frontend.network
+Network=forgejo.network
+PublishPort=22:22
+Volume=/home/forge/forgejo:/data
+Volume=/etc/timezone:/etc/timezone:ro
+Volume=/etc/localtime:/etc/localtime:ro
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
