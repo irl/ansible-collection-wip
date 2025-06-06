@@ -1,0 +1,15 @@
+---
+namespace: irl
+name: wip
+version: "0.0.0"
+readme: "README.md"
+license:
+  - BSD-2-Clause
+authors:
+  - irl
+description: Unstable and experimental Ansible collection. Do not build anything on this.
+homepage: https://guardianproject.dev/irl/ansible-collection-wip
+repository: https://guardianproject.dev/irl/ansible-collection-wip.git
+issues: https://guardianproject.dev/irl/ansible-collection-wip/issues/
+dependencies:
+  ansible.posix: "*"
