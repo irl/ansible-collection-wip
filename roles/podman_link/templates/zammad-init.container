@@ -1,0 +1,21 @@
+[Unit]
+Requires=zammad-postgresql.service
+After=zammad-postgresql.service
+Requires=zammad-redis.service
+After=zammad-redis.service
+Requires=zammad-memcached.service
+After=zammad-memcached.service
+
+[Container]
+ContainerName=zammad-init
+EnvironmentFile=common-zammad.env
+Exec=zammad-init
+Image=registry.gitlab.com/digiresilience/link/link-stack/zammad:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-config-nginx:/etc/nginx/sites-enabled
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-var:/opt/zammad/var
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-storage:/opt/zammad/storage:ro
+Network=link.network
+
+[Service]
+Restart=on-failure
+Slice=link.slice

@@ -1,0 +1,18 @@
+[Unit]
+Requires=zammad-railsserver.service
+After=zammad-railsserver.service
+
+[Container]
+ContainerName=zammad-nginx
+EnvironmentFile=common-zammad.env
+Exec=zammad-nginx
+ExposeHostPort=8080
+Image=registry.gitlab.com/digiresilience/link/link-stack/zammad:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-config-nginx:/etc/nginx/sites-enabled
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-var:/opt/zammad/var:ro
+Network=link.network
+Network=frontend.network
+
+[Service]
+Restart=always
+Slice=link.slice

@@ -1,0 +1,16 @@
+[Unit]
+Requires=zammad-opensearch.service
+After=zammad-opensearch.service
+
+[Container]
+ContainerName=opensearch-dashboards
+Environment=OPENSEARCH_USERNAME="kibanaserver"
+Environment=OPENSEARCH_PASSWORD="kibanaserver"
+Image=registry.gitlab.com/digiresilience/link/link-stack/opensearch-dashboards:3.1.0b2
+PublishPort=127.0.0.1:5601:5601
+#Volume=/home/{{ podman_link_podman_rootless_user }}/opensearch-dashboards-config.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice

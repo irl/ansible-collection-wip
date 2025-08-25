@@ -1,0 +1,10 @@
+[Container]
+ContainerName=zammad-memcached
+Exec=memcached -m 256M
+Image=registry.gitlab.com/digiresilience/link/link-stack/memcached:3.1.0b2
+Network=link.network
+ExposeHostPort=11211
+
+[Service]
+Restart=always
+Slice=link.slice

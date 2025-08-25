@@ -1,0 +1,17 @@
+[Container]
+ContainerName=zammad-postgresql
+Environment=POSTGRES_PASSWORD={{ podman_link_postgres_zammad_password }}
+Environment=POSTGRES_USER={{ podman_link_postgres_zammad_user }}
+Environment=POSTGRES_DB={{ podman_link_postgres_zammad_database }}
+Environment=POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+Environment=POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+Image=registry.gitlab.com/digiresilience/link/link-stack/postgresql:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/postgresql-data:/var/lib/postgresql/data
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-data:/opt/zammad
+Volume=/home/{{ podman_link_podman_rootless_user }}/zammad-backup:/var/tmp/zammad:ro
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice
+

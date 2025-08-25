@@ -1,0 +1,10 @@
+[Container]
+ContainerName=zammad-redis
+Environment=REDIS_PASSWORD={{ podman_link_zammad_redis_password }}
+Image=registry.gitlab.com/digiresilience/link/link-stack/redis:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/redis-data:/data
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice

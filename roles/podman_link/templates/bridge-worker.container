@@ -1,0 +1,13 @@
+[Unit]
+Requires=bridge-postgresql.service link.service
+After=bridge-postgresql.service link.service
+
+[Container]
+ContainerName=bridge-worker
+EnvironmentFile=common-bridge.env
+Image=registry.gitlab.com/digiresilience/link/link-stack/bridge-worker:3.1.0b2
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice

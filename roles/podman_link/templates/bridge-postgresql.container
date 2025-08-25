@@ -1,0 +1,11 @@
+[Container]
+ContainerName=bridge-postgresql
+EnvironmentFile=common-bridge.env
+Image=registry.gitlab.com/digiresilience/link/link-stack/postgresql:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/bridge-postgresql-data:/var/lib/postgresql/data
+Network=link.network
+
+
+[Service]
+Restart=always
+Slice=link.slice

@@ -1,0 +1,25 @@
+podman_link_podman_rootless_user: link
+podman_link_web_hostname: "{{ inventory_hostname }}"
+podman_link_postgres_zammad_user: postgres
+podman_link_postgres_zammad_database: zammad_production
+podman_link_postgres_link_user: link
+podman_link_postgres_link_database: link
+# podman_link_postgres_zammad_password:
+# podman_link_postgres_link_password:
+# podman_link_postgres_root_password:
+# podman_link_zammad_redis_password:
+# podman_link_opensearch_password:
+podman_link_opensearch_memory_limit: 2048
+podman_link_setup_mode: false
+podman_link_leafcutter_enabled: false
+podman_link_dashboard_url: ""
+podman_link_zammad_api_token: ""
+# podman_link_nextauth_secret:
+# podman_link_google_client_id:
+# podman_link_google_client_secret:
+#
+# the following may seem useless, but unless they are included as variables in the environment file template,
+# they automatically get wrapped in quotes by systemd causing zammad to not connect
+podman_link_postgres_zammad_postgresql_host: zammad-postgresql
+podman_link_postgres_zammad_es_host: opensearch
+podman_link_postgres_zammad_memcached_server: zammad-memcached:11211

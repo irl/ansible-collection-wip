@@ -1,0 +1,229 @@
+---
+- name: create service configuration directories
+  ansible.builtin.file:
+    path: "/home/{{ podman_link_podman_rootless_user }}/{{ item }}"
+    state: directory
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group: "{{ podman_link_podman_rootless_user }}"
+    mode: "0755"
+  become: true
+  with_items:
+    - zammad-storage
+    - zammad-var
+    - zammad-backup
+    - zammad-data
+    - signal-cli-rest-api-data
+    - bridge-postgresql-data
+    - bridge-whatsapp-data
+    - redis-data
+    - postgresql-data
+
+- name: create configuration directories where containers need to execute scripts
+  ansible.builtin.file:
+    path: "/home/{{ podman_link_podman_rootless_user }}/{{ item }}"
+    state: directory
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group: "{{ podman_link_podman_rootless_user }}"
+    mode: "0777"
+  become: true
+  with_items:
+    - zammad-config-nginx
+    - opensearch-data
+
+- name: install zammad railsserver database configuration file
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_link_podman_rootless_user }}/{{ item }}"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group: "{{ podman_link_podman_rootless_user }}"
+    mode: "0444"
+  become: true
+  with_items:
+    - zammad-database.yml
+
+- name: install env configuration files
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_link_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    mode: "0600"
+  become: true
+  with_items:
+    - common-zammad.env
+    - common-bridge.env
+
+- name: Set sysctl settings for elasticsearch
+  sysctl:
+    name: vm.max_map_count
+    value: '262144'
+    state: present
+  become: true
+
+- name: Set vm.overcommit_memory for Memcached
+  sysctl:
+    name: vm.overcommit_memory
+    value: '1'
+    state: present
+  become: true
+
+- name: install opensearch config
+  ansible.builtin.copy:
+    src: templates/opensearch-config.yml
+    dest: "/home/{{ podman_link_podman_rootless_user }}/opensearch-config.yml"
+    mode: "0444"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group: "{{ podman_link_podman_rootless_user }}"
+  become: true
+
+- name: install podman quadlet for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_link_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - link.container
+    - zammad-opensearch.container
+    - opensearch-dashboards.container
+    - bridge-worker.container
+    - bridge-postgresql.container
+    - bridge-whatsapp.container
+    - signal-cli-rest-api.container
+    - zammad-init.container
+    - zammad-nginx.container
+    - zammad-railsserver.container
+    - zammad-scheduler.container
+    - zammad-postgresql.container
+    - zammad-websocket.container
+    - zammad-redis.container
+    - zammad-memcached.container
+  become: true
+
+
+- name: install network quadlets for rootless podman user
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/home/{{ podman_link_podman_rootless_user }}/.config/containers/systemd/{{ item }}"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    mode: "0400"
+  with_items:
+    - frontend.network
+    - link.network
+  become: true
+
+- name: verify quadlets are correctly defined
+  ansible.builtin.command: /usr/libexec/podman/quadlet -dryrun -user
+  register: podman_link_quadlet_result
+  ignore_errors: true
+  changed_when: false
+  become: true
+  become_user: "{{ podman_link_podman_rootless_user }}"
+
+- name: assert that the quadlet verification succeeded
+  ansible.builtin.assert:
+    that:
+      - podman_link_quadlet_result.rc == 0
+    fail_msg: "'/usr/libexec/podman/quadlet -dryrun -user' failed! Output withheld to prevent leaking secrets."
+
+#- name: set up nginx
+#  ansible.builtin.include_role:
+#    name: irl.wip.podman_nginx
+#  vars:
+#    podman_nginx_frontend_network: frontend
+#    podman_nginx_podman_rootless_user: "{{ podman_link_podman_rootless_user }}"
+#    podman_nginx_primary_hostname: "{{ podman_link_web_hostname }}"
+#    podman_nginx_systemd_service_slice: "link.slice"
+#    podman_nginx_systemd_service_requires: ["zammad-nginx"]
+#
+#
+#- name: create nginx configuration file
+#  ansible.builtin.template:
+#    src: nginx.conf
+#    dest: "/home/{{ podman_link_podman_rootless_user }}/nginx/nginx.conf"
+#    owner: "{{ podman_link_podman_rootless_user }}"
+#    group: "{{ podman_link_podman_rootless_user }}"
+#    mode: "0644"
+#  become: true
+
+- name: install services slice for rootless podman user
+  ansible.builtin.template:
+    src: "link.slice"
+    dest: "/home/{{ podman_link_podman_rootless_user }}/.config/systemd/user/link.slice"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group:  "{{ podman_link_podman_rootless_user }}"
+    mode: "0655"
+  become: true
+
+- name: make sure services are started on boot
+  ansible.builtin.systemd_service:
+    name: "link.slice"
+    enabled: true
+    state: started
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ podman_link_podman_rootless_user }}"
+  notify:
+    - "restart link.slice"
+
+
+- name: set es verify false
+  ansible.builtin.shell: >
+    podman exec zammad-railsserver rails r "Setting.set('es_ssl_verify', false)"
+  become: true
+  become_user: "{{ podman_link_podman_rootless_user }}"
+  notify:
+    - "restart link.slice"
+  register: es_ssl_result
+  retries: 20
+  delay: 5
+  until: es_ssl_result.rc == 0
+
+- name: Run OpenSearch setup script
+  ansible.builtin.shell: |
+    podman exec zammad-opensearch /bin/sh -c '
+      if [ ! -f /tmp/.securityadmin_done ]; then
+        chmod +x /usr/share/opensearch/plugins/opensearch-security/tools/securityadmin.sh && \
+        /usr/share/opensearch/plugins/opensearch-security/tools/securityadmin.sh \
+          -cd /usr/share/opensearch/config/opensearch-security/ \
+          -icl \
+          -key /usr/share/opensearch/config/kirk-key.pem \
+          -cert /usr/share/opensearch/config/kirk.pem \
+          -cacert /usr/share/opensearch/config/root-ca.pem \
+          -nhnv && \
+        touch /tmp/.securityadmin_done
+      fi
+    '
+  become: true
+  become_user: "{{ podman_link_podman_rootless_user }}"
+  register: securityadmin_scipt_result
+  retries: 20
+  delay: 5
+  until: securityadmin_scipt_result.rc == 0
+  notify:
+    - "restart link.slice"
+
+- name: set up nginx
+  ansible.builtin.include_role:
+    name: irl.wip.podman_nginx
+  vars:
+    podman_nginx_frontend_network: frontend
+    podman_nginx_podman_rootless_user: "{{ podman_link_podman_rootless_user }}"
+    podman_nginx_primary_hostname: "{{ podman_link_web_hostname }}"
+    podman_nginx_systemd_service_slice: link.slice
+    podman_nginx_systemd_service_requires: ["zammad-nginx"]
+#    podman_nginx_additional_volumes:
+#      - src: "/home/{{ podman_cleaninsights_podman_rootless_user }}/matomo"
+#        dest: "/var/www/html"
+#        options: "ro"
+
+- name: create nginx configuration file
+  ansible.builtin.template:
+    src: nginx.conf
+    dest: "/home/{{ podman_link_podman_rootless_user }}/nginx/nginx.conf"
+    owner: "{{ podman_link_podman_rootless_user }}"
+    group: "{{ podman_link_podman_rootless_user }}"
+    mode: "0644"
+  become: true
+  notify:
+    - "restart link.slice"

@@ -1,0 +1,9 @@
+production:
+  adapter: postgresql
+  database: {{ podman_link_postgres_zammad_database }}
+  pool: 50
+  timeout: 5000
+  encoding: utf8
+  username: {{ podman_link_postgres_zammad_user }}
+  password: {{ podman_link_postgres_zammad_password }}
+  host: zammad-postgresql

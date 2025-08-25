@@ -1,0 +1,24 @@
+[Container]
+ContainerName=zammad-opensearch
+Environment=discovery.type=single-node
+Environment=plugins.security.ssl.transport.enforce_hostname_verification=false
+Environment=plugins.security.ssl.transport.resolve_hostname=false
+Environment=cluster.routing.allocation.disk.watermark.low=3gb
+Environment=cluster.routing.allocation.disk.watermark.high=2gb
+Environment=cluster.routing.allocation.disk.watermark.flood_stage=500mb
+Environment=cluster.info.update.interval=1m
+Environment=node.name=opensearch-node1
+Environment=bootstrap.memory_lock=true
+Environment=OPENSEARCH_JAVA_OPTS="-Xms{{ podman_link_opensearch_memory_limit }}m -Xmx{{podman_link_opensearch_memory_limit }}m -XX:-HeapDumpOnOutOfMemoryError"
+Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD={{ podman_link_opensearch_password }}
+Environment=compatibility.override_main_response_version=true
+Image=registry.gitlab.com/digiresilience/link/link-stack/opensearch:3.1.0b2
+PublishPort=127.0.0.1:9200:9200
+PublishPort=127.0.0.1:9600:9600
+Volume=/home/{{ podman_link_podman_rootless_user }}/opensearch-data:/usr/share/opensearch/data
+Volume=/home/{{ podman_link_podman_rootless_user }}/opensearch-config.yml:/usr/share/opensearch/config/opensearch-security/config.yml
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice

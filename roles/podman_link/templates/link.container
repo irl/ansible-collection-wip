@@ -1,0 +1,21 @@
+[Unit]
+Requires=bridge-postgresql.service
+After=bridge-postgresql.service
+
+[Container]
+ContainerName=link
+Environment=ZAMMAD_VIRTUAL_HOST={{ podman_link_web_hostname }}
+Environment=SETUP_MODE={{ podman_link_setup_mode }}
+Environment=LEAFCUTTER_ENABLED={{ podman_link_leafcutter_enabled }}
+Environment=LEAFCUTTER_DEFAULT_DASHBOARD_URL={{ podman_link_dashboard_url }}
+Environment=ZAMMAD_API_TOKEN={{ podman_link_zammad_api_token }}
+Environment=LINK_URL=https://localhost:3000/link
+Environment=ZAMMAD_URL=http://zammad-nginx:8080
+EnvironmentFile=common-bridge.env
+ExposeHostPort=3000
+Image=registry.gitlab.com/digiresilience/link/link-stack/link:3.1.0b2
+Network=link.network
+
+[Service]
+Restart=always
+Slice=link.slice

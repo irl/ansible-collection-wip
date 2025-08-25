@@ -1,0 +1,22 @@
+[Unit]
+Description=Link Slice
+Before=slices.target
+Requires=zammad-init.service
+Requires=zammad-memcached.service
+Requires=zammad-postgresql.service
+Requires=zammad-redis.service
+Requires=zammad-railsserver.service
+Requires=zammad-scheduler.service
+Requires=zammad-websocket.service
+Requires=zammad-opensearch.service
+Requires=link.service
+Requires=bridge-postgresql.service
+Requires=zammad-nginx.service
+Requires=signal-cli-rest-api.service
+Requires=bridge-whatsapp.service
+Requires=bridge-worker.service
+Requires=opensearch-dashboards.service
+Requires=nginx.service
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,16 @@
+[Unit]
+Requires=link.service
+After=link.service
+
+[Container]
+ContainerName=signal-cli-rest-api
+Environment=MODE=native
+Environment=PORT=8081
+ExposeHostPort=8081
+Image=registry.gitlab.com/digiresilience/link/link-stack/signal-cli-rest-api:3.1.0b2
+Volume=/home/{{ podman_link_podman_rootless_user }}/signal-cli-rest-api-data:/home/.local/share/signal-cli
+Network=link.network
+
+[Service]
+Restart=always
+slice=link.slice
