@@ -11,8 +11,23 @@ Environment=FORGEJO__database__HOST=mariadb:3306
 Environment=FORGEJO__database__NAME={{ podman_forgejo_mariadb_database }}
 Environment=FORGEJO__database__USER={{ podman_forgejo_mariadb_user }}
 Environment=FORGEJO__database__PASSWD={{ podman_forgejo_mariadb_password }}
+Environment=FORGEJO__email_0X2E_incoming__ENABLED=true
+Environment=FORGEJO__email_0X2E_incoming__REPLY_TO_ADDRESS={{ podman_forgejo_reply_to }}
+Environment=FORGEJO__email_0X2E_incoming__HOST={{ podman_forgejo_imap_hostname }}
+Environment=FORGEJO__email_0X2E_incoming__PORT=993
+Environment=FORGEJO__email_0X2E_incoming__USERNAME={{ podman_forgejo_imap_username }}
+Environment=FORGEJO__email_0X2E_incoming__PASSWORD={{ podman_forgejo_imap_password }}
+Environment=FORGEJO__email_0X2E_incoming__USE_TLS=true
 Environment=FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION=true
 Environment=FORGEJO__server__LANDING_PAGE=/explore/repos
+Environment=FORGEJO__service__ENABLE_NOTIFY_MAIL=true
+Environment=FORGEJO__mailer__ENABLED=true
+Environment=FORGEJO__mailer__PROTOCOL=smtps
+Environment=FORGEJO__mailer__SMTP_ADDR={{ podman_forgejo_smtp_hostname }}
+Environment=FORGEJO__mailer__SMTP_PORT=465
+Environment=FORGEJO__mailer__USER={{ podman_forgejo_smtp_username }}
+Environment=FORGEJO__mailer__PASSWD={{ podman_forgejo_smtp_password }}
+Environment=FORGEJO__mailer__FROM={{ podman_forgejo_smtp_from }}
 Image=codeberg.org/forgejo/forgejo:11
 Network=frontend.network
 Network=forgejo.network
