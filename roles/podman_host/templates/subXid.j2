@@ -1,4 +1,0 @@
-# {{ ansible_managed }}
-{% for username in podman_host_rootless_users %}
-{{ username }}:{{ 100000 + ((loop.index - 1) * 65536) }}:65536
-{% endfor %}

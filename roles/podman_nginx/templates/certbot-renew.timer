@@ -1,9 +1,0 @@
-[Unit]
-Description=Timer for certbot renewals
-
-[Timer]
-OnCalendar=daily
-Persistent=true
-
-[Install]
-WantedBy=timers.target
